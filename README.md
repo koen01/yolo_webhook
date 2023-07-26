@@ -60,7 +60,7 @@ The webhook provides a single endpoint, `/yolo_webhook`, that accepts HTTP POST 
 To make a POST request to the webhook endpoint `/yolo_webhook` with JSON data containing the image URL, use the following `curl` command:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"url": "<IMAGE_URL>"}' http://localhost:<FLASK_PORT>/yolo_webhook
+curl -X POST -H "Content-Type: application/json" -d '{"url": "<IMAGE_URL>", "camera": "<CAMERA-IDENTIFIER}"' http://localhost:<FLASK_PORT>/yolo_webhook
 ```
 
 ### Explanation of the Command:
@@ -71,7 +71,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"url": "<IMAGE_URL>"}' htt
 
 - `-H "Content-Type: application/json"`: Sets the "Content-Type" header to indicate that the request body contains JSON data.
 
-- `-d '{"url": "<IMAGE_URL>"}'`: The JSON data to be sent in the request body. Replace `<IMAGE_URL>` with the URL of the image you want to process.
+- `-d '{"url": "<IMAGE_URL>", "camera": "<CAMERA-IDENTIFIE>"}'`: The JSON data to be sent in the request body. Replace `<IMAGE_URL>` with the URL of the image you want to process and `<CAMERA-IDENTIFIER>` with the name/id of your camera.
 
 - `http://localhost:<FLASK_PORT>/yolo_webhook`: The URL of the webhook's endpoint. Replace `<FLASK_PORT>` with the port number on which the Flask server is running inside the Docker container (the same port used when running the container with the `-e FLASK_PORT=<PORT>` option).
 
@@ -79,11 +79,11 @@ curl -X POST -H "Content-Type: application/json" -d '{"url": "<IMAGE_URL>"}' htt
 ### Example Usage with Actual Values:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"url": "https://example.com/image.jpg"}' http://localhost:5000/yolo_webhook
+curl -X POST -H "Content-Type: application/json" -d '{"url": "http://example.com/image.jpg", "camera": "1"}' http://localhost:5000/yolo_webhook
 ```
 
 In this example, the `curl` command sends a POST request to the webhook with the image URL `https://example.com/image.jpg`. The webhook will process the image and perform object detection using the YOLOv5 model.
-
+The 'camera' field represents the camera identifier.
 Please ensure that the webhook is running as a Docker container on your system before making the `curl` request. Adjust the `localhost` part of the URL accordingly if the webhook is running on a different host.
 
 ---
@@ -96,12 +96,18 @@ The JSON output published to the "results" topic contains information about the 
 {
   "person": {
     "count": 1,
-    "confidence": [0.8423805237]
-  }
+    "confidence": [0.9484558105]
+  },
+  "camera": "1",
+  "datetime": "2023-07-26T10:07:15.086791"
 }
+
 ```
 
 ### Explanation of the JSON Fields:
+- `"camera"`: This field indicates the camera identifier from which the image was captured.
+
+- `"datetime"`: This field shows the timestamp of when the processing occurred. It is provided in ISO 8601 format, which includes the date and time down to milliseconds.
 
 - `"person"`: This is the class label of the detected object. In this case, it represents the "person" class.
 
@@ -115,8 +121,10 @@ If there were multiple "person" instances detected in the image, the JSON output
 {
   "person": {
     "count": 2,
-    "confidence": [0.8423805237, 0.9261578324]
-  }
+    "confidence": [0.9484558105, 0.9283701181]
+  },
+  "camera": "3",
+  "datetime": "2023-07-26T10:07:15.086791"
 }
 ```
 
