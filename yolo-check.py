@@ -8,6 +8,7 @@ from io import BytesIO
 import json
 import os
 import base64
+import datetime
 
 app = Flask(__name__)
 
@@ -20,14 +21,26 @@ MODELCONF = float(os.environ['MODELCONF'])
 FLASK_PORT = int(os.environ['FLASK_PORT'])
 
 # Function to send MQTT message
-def publish_mqtt_message(results_counted, results_image):
+def publish_mqtt_message(camera, results_counted, results_image):
+
+    # Append the 'camera' and 'name' fields to the MQTT topics
+    mqtt_results_topic = f'{MQTT_TOPIC_RESULTS}/{camera}'
+    mqtt_image_topic = f'{MQTT_TOPIC_IMAGE}/{camera}'
+
+    # Add the 'camera' and 'datetime' fields to the results_counted JSON
+    now = datetime.datetime.now().isoformat()
+    results_data = json.loads(results_counted)
+    results_data['camera'] = camera
+    results_data['datetime'] = now
+    results_counted = json.dumps(results_data)
+
     # Publish the results
-    publish.single(MQTT_TOPIC_RESULTS, results_counted, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
+    publish.single(mqtt_results_topic, results_counted, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
 
     # Publish the image
     binary_fc = open(results_image, 'rb').read()
     base64_utf8_str = base64.b64encode(binary_fc).decode('utf-8')
-    publish.single(MQTT_TOPIC_IMAGE, base64_utf8_str, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
+    publish.single(mqtt_image_topic, base64_utf8_str, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
 
 # Function to count the occurrences
 def count_name_occurrences(json_array):
@@ -57,6 +70,7 @@ def webhook():
     try:
         data = request.get_json()  # Parse the JSON data from the request
         url = data.get('url')  # Get the 'url' value from the JSON data
+        camera = data.get('camera')  # Get the 'camera' value from the JSON data
 
         if url:
             # Get the image
@@ -70,7 +84,7 @@ def webhook():
             print(results_json)
             # Generate an image with the bounding boxes
             results.render()  # updates results.imgs with boxes and labels
-            img_savename = f"results.png"
+            img_savename = f'results-{camera}.png'
             results_image = Image.fromarray(results.ims[0]).save(img_savename)
 
             # Count the results by name
@@ -78,7 +92,7 @@ def webhook():
 
             if results_json != '[]':
                 # Publish to MQTT
-                publish_mqtt_message(results_counted, img_savename)
+                publish_mqtt_message(camera, results_counted, img_savename)
 
                 # Return the JSON results
                 return "MQTT Message sent!", 200
